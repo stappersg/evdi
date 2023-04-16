@@ -35,7 +35,7 @@ struct evdi_fbdev {
 	struct drm_fb_helper helper;
 	struct evdi_framebuffer efb;
 	struct list_head fbdev_list;
-	struct fb_ops fb_ops;
+	const struct fb_ops *fb_ops;
 	int fb_count;
 };
 
@@ -202,8 +202,7 @@ static int evdi_fb_release(struct fb_info *info, int user)
 
 	return 0;
 }
-
-static struct fb_ops evdifb_ops = {
+static const struct fb_ops evdifb_ops = {
 	.owner = THIS_MODULE,
 	.fb_check_var = drm_fb_helper_check_var,
 	.fb_set_par = drm_fb_helper_set_par,
@@ -405,7 +404,12 @@ static int evdifb_create(struct drm_fb_helper *helper,
 	fb = &efbdev->efb.base;
 
 	efbdev->helper.fb = fb;
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+	efbdev->helper.info = info;
+#else
 	efbdev->helper.fbdev = info;
+#endif
+
 
 	strcpy(info->fix.id, "evdidrmfb");
 
@@ -419,8 +423,8 @@ static int evdifb_create(struct drm_fb_helper *helper,
 	info->flags = FBINFO_DEFAULT | FBINFO_CAN_FORCE_OUTPUT;
 #endif
 
-	efbdev->fb_ops = evdifb_ops;
-	info->fbops = &efbdev->fb_ops;
+	efbdev->fb_ops = &evdifb_ops;
+	info->fbops = efbdev->fb_ops;
 
 #if KERNEL_VERSION(5, 2, 0) <= LINUX_VERSION_CODE || defined(EL8)
 	drm_fb_helper_fill_info(info, &efbdev->helper, sizes);
@@ -459,8 +463,13 @@ static void evdi_fbdev_destroy(__always_unused struct drm_device *dev,
 {
 	struct fb_info *info;
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+	if (efbdev->helper.info) {
+		info = efbdev->helper.info;
+#else
 	if (efbdev->helper.fbdev) {
 		info = efbdev->helper.fbdev;
+#endif
 		unregister_framebuffer(info);
 		if (info->cmap.len)
 			fb_dealloc_cmap(&info->cmap);
@@ -491,7 +500,11 @@ int evdi_fbdev_init(struct drm_device *dev)
 		return -ENOMEM;
 
 	evdi->fbdev = efbdev;
+#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+	drm_fb_helper_prepare(dev, &efbdev->helper, 32, &evdi_fb_helper_funcs);
+#else
 	drm_fb_helper_prepare(dev, &efbdev->helper, &evdi_fb_helper_funcs);
+#endif
 
 #if KERNEL_VERSION(5, 7, 0) <= LINUX_VERSION_CODE || defined(EL8)
 	ret = drm_fb_helper_init(dev, &efbdev->helper);
@@ -508,7 +521,12 @@ int evdi_fbdev_init(struct drm_device *dev)
 	drm_fb_helper_single_add_all_connectors(&efbdev->helper);
 #endif
 
+#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+	ret = drm_fb_helper_initial_config(&efbdev->helper);
+#else
 	ret = drm_fb_helper_initial_config(&efbdev->helper, 32);
+#endif
+
 	if (ret) {
 		drm_fb_helper_fini(&efbdev->helper);
 		kfree(efbdev);
@@ -537,10 +555,17 @@ void evdi_fbdev_unplug(struct drm_device *dev)
 		return;
 
 	efbdev = evdi->fbdev;
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+	if (efbdev->helper.info) {
+		struct fb_info *info;
+
+		info = efbdev->helper.info;
+#else
 	if (efbdev->helper.fbdev) {
 		struct fb_info *info;
 
 		info = efbdev->helper.fbdev;
+#endif
 #if KERNEL_VERSION(5, 6, 0) <= LINUX_VERSION_CODE || defined(EL8)
 		unregister_framebuffer(info);
 #else

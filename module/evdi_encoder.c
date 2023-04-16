@@ -18,6 +18,8 @@
 #endif
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
+#include <drm/drm_encoder.h>
+#include <drm/drm_modeset_helper_vtables.h>
 #include "evdi_drm_drv.h"
 
 /* dummy encoder */
@@ -54,7 +56,7 @@ struct drm_encoder *evdi_encoder_init(struct drm_device *dev)
 		goto err;
 
 	ret = drm_encoder_init(dev, encoder, &evdi_enc_funcs,
-			       DRM_MODE_ENCODER_TMDS, dev_name(dev->dev));
+			       DRM_MODE_ENCODER_TMDS, "%s", dev_name(dev->dev));
 	if (ret) {
 		EVDI_ERROR("Failed to initialize encoder: %d\n", ret);
 		goto err_encoder;

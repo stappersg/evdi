@@ -133,6 +133,7 @@ evdi_gem_create(struct drm_file *file,
 	if (obj == NULL)
 		return -ENOMEM;
 
+	obj->allow_sw_cursor_rect_updates = evdi_was_called_by_mutter();
 	ret = drm_gem_handle_create(file, &obj->base, &handle);
 	if (ret) {
 		drm_gem_object_release(&obj->base);
@@ -144,7 +145,6 @@ evdi_gem_create(struct drm_file *file,
 #else
 	drm_gem_object_put_unlocked(&obj->base);
 #endif
-	obj->allow_sw_cursor_rect_updates = evdi_was_called_by_mutter();
 	*handle_p = handle;
 	return 0;
 }
@@ -189,8 +189,12 @@ int evdi_drm_gem_mmap(struct file *filp, struct vm_area_struct *vma)
 	if (ret)
 		return ret;
 
+#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+	vm_flags_mod(vma, VM_MIXEDMAP, VM_PFNMAP);
+#else
 	vma->vm_flags &= ~VM_PFNMAP;
 	vma->vm_flags |= VM_MIXEDMAP;
+#endif
 
 	return ret;
 }
@@ -380,6 +384,8 @@ void evdi_gem_free_object(struct drm_gem_object *gem_obj)
 #endif
 	obj->resv = NULL;
 	mutex_destroy(&obj->pages_lock);
+	drm_gem_object_release(&obj->base);
+	kfree(obj);
 }
 
 /*
@@ -470,10 +476,11 @@ static void evdi_prime_unpin(struct drm_gem_object *obj)
 struct sg_table *evdi_prime_get_sg_table(struct drm_gem_object *obj)
 {
 	struct evdi_gem_object *bo = to_evdi_bo(obj);
-	#if KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE || defined(EL8)
-		return drm_prime_pages_to_sg(obj->dev, bo->pages, bo->base.size >> PAGE_SHIFT);
-	#else
-		return drm_prime_pages_to_sg(bo->pages, bo->base.size >> PAGE_SHIFT);
-	#endif
+
+#if KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE || defined(EL8)
+	return drm_prime_pages_to_sg(obj->dev, bo->pages, bo->base.size >> PAGE_SHIFT);
+#else
+	return drm_prime_pages_to_sg(bo->pages, bo->base.size >> PAGE_SHIFT);
+#endif
 }
 

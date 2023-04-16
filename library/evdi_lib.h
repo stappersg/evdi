@@ -6,14 +6,15 @@
 #define EVDI_LIB_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define LIBEVDI_VERSION_MAJOR 1
-#define LIBEVDI_VERSION_MINOR 12
-#define LIBEVDI_VERSION_PATCH 0
+#define LIBEVDI_VERSION_MINOR 13
+#define LIBEVDI_VERSION_PATCH 1
 
 struct evdi_lib_version {
 	int version_major;

@@ -18,9 +18,12 @@ sed -i "s/^#define LIBEVDI_VERSION_MINOR .*$/#define LIBEVDI_VERSION_MINOR ${MIN
 sed -i "s/^#define LIBEVDI_VERSION_PATCH .*$/#define LIBEVDI_VERSION_PATCH ${PATCH}/" library/evdi_lib.h
 
 sed -i "s/^LIBVER := .*$/LIBVER := ${MAJOR}.${MINOR}.${PATCH}/" library/Makefile
+sed -i "s/^LIBABI := .*$/LIBABI := ${MAJOR}/" library/Makefile
+sed -i "s/^LIBABI := .*$/LIBABI := ${MAJOR}/" pyevdi/Makefile
 
 sed -i "s/^PACKAGE_VERSION=.*$/PACKAGE_VERSION=${MAJOR}.${MINOR}.${PATCH}/" module/dkms.conf
 
+sed -i "s/^evdi_version=.*$/evdi_version='${MAJOR}.${MINOR}.${PATCH}'/" ci/deb_config
 
 sed -i "s/^#define DRIVER_MAJOR .*$/#define DRIVER_MAJOR ${MAJOR}/" module/evdi_platform_drv.h
 sed -i "s/^#define DRIVER_MINOR .*$/#define DRIVER_MINOR ${MINOR}/" module/evdi_platform_drv.h
@@ -30,3 +33,11 @@ sed -i "s/^MODVER=.*/MODVER=${MAJOR}.${MINOR}.${PATCH}/" module/Makefile
 
 
 sed -i "s/^#define DRIVER_DATE   .*$/#define DRIVER_DATE   \"$(date +'%Y%m%d')\"/" module/evdi_platform_drv.h
+
+sed -i "s/^VERSION_MAJOR=.*$/VERSION_MAJOR = ${MAJOR}/" pyevdi/test/test_version.py
+sed -i "s/^VERSION_MINOR=.*$/VERSION_MINOR = ${MINOR}/" pyevdi/test/test_version.py
+
+tag="v${MAJOR}.${MINOR}.${PATCH}"
+git tag "${tag}"
+echo -e "Please push tag ${tag} with: \\ngit push origin refs/tags/${tag}:refs/tags/${tag}"
+

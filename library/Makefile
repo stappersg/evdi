@@ -6,12 +6,13 @@ INSTALL ?= install
 CP ?= cp
 LN ?= ln
 RM ?= rm
+PKG_CONFIG ?= pkg-config
 
 DEPS = evdi_ioctl.h
-CFLAGS := -I../module -std=gnu99 -fPIC -D_FILE_OFFSET_BITS=64 $(CFLAGS)
+CFLAGS := -I../module -std=gnu99 -fPIC -D_FILE_OFFSET_BITS=64 $(CFLAGS) $$($(PKG_CONFIG) --cflags-only-I libdrm)
 
-LIBVER := 1.12.0
-LIBABI := 0
+LIBVER := 1.13.1
+LIBABI := 1
 
 PREFIX ?= /usr/local
 LIBDIR ?= $(PREFIX)/lib
@@ -19,7 +20,7 @@ LIBDIR ?= $(PREFIX)/lib
 default: libevdi.so.$(LIBVER)
 
 clean:
-	rm -rf *.o libevdi.so.$(LIBVER) libevdi.so
+	rm -rf *.o libevdi.so*
 
 %.o: %.c $(DEPS)
 	$(CC) $(CFLAGS) -o $@ -c $<
@@ -27,6 +28,7 @@ clean:
 libevdi.so.$(LIBVER): evdi_lib.o
 	$(CC) $^ -shared -Wl,-soname,libevdi.so.$(LIBABI) -o $@ -lc -lgcc $(LDFLAGS)
 	$(CP) libevdi.so.$(LIBVER) libevdi.so
+	$(LN) -sf libevdi.so.$(LIBVER) libevdi.so.$(LIBABI)
 
 install:
 	$(INSTALL) -d $(DESTDIR)$(LIBDIR)

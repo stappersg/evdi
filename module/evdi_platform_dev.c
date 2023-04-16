@@ -21,9 +21,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
-#include <linux/iommu.h>
-#endif
 
 #include "evdi_platform_drv.h"
 #include "evdi_debug.h"
@@ -61,26 +58,17 @@ int evdi_platform_device_probe(struct platform_device *pdev)
 	struct drm_device *dev;
 	struct evdi_platform_device_data *data;
 
-#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
-#if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
-	struct dev_iommu iommu;
-#endif
-#endif
 	EVDI_CHECKPT();
-
 	data = kzalloc(sizeof(struct evdi_platform_device_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
-/* Intel-IOMMU workaround: platform-bus unsupported, force ID-mapping */
-#if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
 #if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
-	memset(&iommu, 0, sizeof(iommu));
-	iommu.priv = (void *)-1;
-	pdev->dev.iommu = &iommu;
 #else
-#define INTEL_IOMMU_DUMMY_DOMAIN                ((void *)-1)
+	#if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
+	/* Intel-IOMMU workaround: platform-bus unsupported, force ID-mapping */
+	#define INTEL_IOMMU_DUMMY_DOMAIN                ((void *)-1)
 	pdev->dev.archdata.iommu = INTEL_IOMMU_DUMMY_DOMAIN;
-#endif
+	#endif
 #endif
 
 	dev = evdi_drm_device_create(&pdev->dev);

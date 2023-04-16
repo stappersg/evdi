@@ -16,6 +16,7 @@ EOF
 fi
 
 KVER=${1}
+# shellcheck disable=SC2162
 IFS='.' read -a VERS <<< "${KVER}"
 MAJ=${VERS[0]}
 MIN=${VERS[1]:-0}
@@ -29,6 +30,7 @@ KERNEL_VERSION() { # MAJ MIN PATCH
   echo $(( ${1} * 65536 + ${2} * 256 + ${3} ))
 }
 
+export LINUX_VERSION_CODE=
 LINUX_VERSION_CODE=$(KERNEL_VERSION "${MAJ}" "${MIN}" "${PATCH}")
 
 progress() { # current max
@@ -44,9 +46,11 @@ progress() { # current max
   done
   printf "| %s%%" $(( 100*(current*100)/(max*100) ))
 
-  if [[ ${current} != ${max} ]]; then
+  if [[ ${current} != "${max}" ]]; then
+    # shellcheck disable=SC1117
     printf "\r"
   else
+    # shellcheck disable=SC1117
     printf "\n"
   fi
 }
@@ -61,6 +65,7 @@ copy_module() { # module suffix
 }
 
 get_condition() { # line
+# shellcheck disable=SC2016
   sed \
     -e 's/#if//' \
     -e 's/#elif//' \
@@ -98,7 +103,9 @@ export_file() { # file
     case $state in
       OUT_OF_IF)
         if [[ "${line}" != "#include <linux/version.h>" ]]; then
+          # shellcheck disable=SC2076
           if [[ "${line}" =~ "#if KERNEL_VERSION" ]]; then
+            # shellcheck disable=SC2046
             if [ $(eval_line "${line}") == 1 ]; then
               state="IN_TRUE"
             else
@@ -111,6 +118,7 @@ export_file() { # file
         ;;
 
       IN_TRUE)
+        # shellcheck disable=SC2076
         if [[ "${line}" =~ "#elif KERNEL_VERSION" ]] || \
            [[ "${line}" == "#else" ]]; then
           state="WAS_IN_TRUE"
@@ -128,7 +136,9 @@ export_file() { # file
         ;;
 
       IN_FALSE)
+        # shellcheck disable=SC2076
         if [[ "${line}" =~ "#elif KERNEL_VERSION" ]]; then
+          # shellcheck disable=SC2046
           if [ $(eval_line "${line}") == 1 ]; then
             state="IN_TRUE"
           fi
@@ -147,6 +157,7 @@ modify_file() { # file
   local tmp="${file}.tmp"
   rm -f "${tmp}"
 
+  sed -i -e 's/ || defined(EL8)//g' -e 's/ || defined(EL9)//g'  -e 's/ || defined(RPI)//g'  "${file}"
   export_file "${file}" > "${tmp}"
 
   mv "${tmp}" "${file}"
@@ -156,7 +167,7 @@ modify_files() { # module
   max_count=$(count_files "${MODULE}")
   count=0
 
-  for file in ${1}/*; do
+  for file in "${1}"/*; do
     progress ${count} "${max_count}"
 
     case "${file}" in
