@@ -34,6 +34,6 @@ a separate `LICENSE` file states otherwise) are licensed under MIT license.
 
 For more information, see our [support page](http://support.displaylink.com). Visit [displaylink.com](http://displaylink.com) to learn more about DisplayLink technology.
 
-&copy; Copyright 2015-2020 DisplayLink (UK) Ltd.
+&copy; Copyright 2015-2023 DisplayLink (UK) Ltd.
 
 Linux is a registered trademark of Linus Torvalds in the U.S. and other countries.
